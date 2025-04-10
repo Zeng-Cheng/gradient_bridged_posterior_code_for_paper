@@ -1,0 +1,8 @@
+*.npz
+*.RData
+*.RDa
+*.txt
+*.pyc
+*.csv
+.lintr
+*.png
