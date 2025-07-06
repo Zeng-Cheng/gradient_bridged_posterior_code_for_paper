@@ -5,6 +5,7 @@
 
 library(ggplot2)
 library(scales)
+source("src/plot_mcmc.R")
 
 beta_samples = read.table(
     "res/flow_net_beta_samples_grad-bridge.txt", sep = ","
@@ -20,39 +21,22 @@ edges = c("01", "24", "36", "46", "56", "02", "13", "14", "25", "45")
 # ==================
 
 for (i in c(1:10)) {
-    trace = data.frame(x = c(z_samples[, i]), Iteration = c(1:10000))
-
-    ggplot(data = trace, aes(x = Iteration, y = x)) +
-        geom_line(linewidth=0.1) + theme_bw() + ylab(bquote(z[.(edges[i])])) +
-        theme(plot.margin = margin(4, 12, 3, 3)) +
-        theme(
-            axis.title.x = element_text(size = 11),
-            axis.title.y = element_text(size = 11),
-            axis.text.x = element_text(size = 8),
-            axis.text.y = element_text(size = 8)) +
-        scale_x_continuous(breaks = c(0, 3000, 6000, 10000))
-
-    ggsave(paste("trace_flow_z", i, ".png", sep=""),
-        width=1.7, height=1, units='in')
+    plot_trace(
+        res = z_samples[, i],
+        yname = bquote(z[.(edges[i])]),
+        filename = paste("trace_flow_z", i, ".png", sep=""),
+        width=1.7, height=1
+    )
 }
 
 for (i in c(1:10)) {
-    trace = data.frame(x = c(beta_samples[, i]), Iteration = c(1:10000))
-
-    ggplot(data = trace, aes(x = Iteration, y = x)) +
-        geom_line(linewidth=0.1) + theme_bw() + ylab(bquote(beta[.(edges[i])])) +
-        theme(plot.margin = margin(4, 12, 3, 3)) +
-        theme(
-            axis.title.x = element_text(size = 11),
-            axis.title.y = element_text(size = 11),
-            axis.text.x = element_text(size = 8),
-            axis.text.y = element_text(size = 8)) +
-        scale_x_continuous(breaks = c(0, 3000, 6000, 10000))
-
-    ggsave(paste("trace_flow_beta", i, ".png", sep=""),
-             width=1.6, height=1, units='in')
+    plot_trace(
+        res = beta_samples[, i],
+        yname = bquote(beta[.(edges[i])]),
+        filename = paste("trace_flow_beta", i, ".png", sep=""),
+        width=1.6, height=1
+    )
 }
-
 
 # ==================
 # acf plots
@@ -194,39 +178,22 @@ print(dim(z_samples))
 # ==================
 
 for (i in c(1:10)) {
-    trace = data.frame(x = c(z_samples[, i]), Iteration = c(1:10000))
-
-    ggplot(data = trace, aes(x = Iteration, y = x)) +
-        geom_line(linewidth=0.1) + theme_bw() + ylab(bquote(z[.(edges[i])])) +
-        theme(plot.margin = margin(4, 12, 3, 3)) +
-        theme(
-            axis.title.x = element_text(size = 11),
-            axis.title.y = element_text(size = 11),
-            axis.text.x = element_text(size = 8),
-            axis.text.y = element_text(size = 8)) +
-        scale_x_continuous(breaks = c(0, 3000, 6000, 10000))
-
-    ggsave(paste("trace_flow_z_nomass", i, ".png", sep=""),
-        width=1.7, height=1, units='in'
+    plot_trace(
+        res = z_samples[, i],
+        yname = bquote(z[.(edges[i])]),
+        filename = paste("trace_flow_z_nomass", i, ".png", sep=""),
+        width=1.7, height=1
     )
 }
 
 
 for (i in c(1:10)) {
-    trace = data.frame(x = c(beta_samples[, i]), Iteration = c(1:10000))
-
-    ggplot(data = trace, aes(x = Iteration, y = x)) +
-        geom_line(linewidth=0.1) + theme_bw() + ylab(bquote(beta[.(edges[i])])) +
-        theme(plot.margin = margin(4, 12, 3, 3)) +
-        theme(
-            axis.title.x = element_text(size = 11),
-            axis.title.y = element_text(size = 11),
-            axis.text.x = element_text(size = 8),
-            axis.text.y = element_text(size = 8)) +
-        scale_x_continuous(breaks = c(0, 3000, 6000, 10000))
-
-    ggsave(paste("trace_flow_beta_nomass", i, ".png", sep=""),
-             width=1.6, height=1, units='in')
+    plot_trace(
+        res = beta_samples[, i],
+        yname = bquote(beta[.(edges[i])]),
+        filename = paste("trace_flow_beta_nomass", i, ".png", sep=""),
+        width=1.6, height=1
+    )
 }
 
 
