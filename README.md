@@ -15,8 +15,8 @@ Many statistical problems include model parameters that are defined as the solut
 
 - Figure 1 is not produced by codes.
 - Results in Section 5.
-    - First, in `flow-net-numpyro.py`, we sample some simulated data, run MCMC to produce the posterior samples, and save the samples in `res/`.
+    - First, in `flow_net.py`, we sample some simulated data, run MCMC to produce the posterior samples, and save the samples in `res/`.
     - Figure 3 and 4 are plotted by `plot-flow-net.R`.
 - Results in Section 6.
     - `data_preprocessing.R`
-    - `data_application_numpyro.py`
+    - `data_application.py`

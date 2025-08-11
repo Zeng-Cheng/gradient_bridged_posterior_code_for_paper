@@ -174,6 +174,10 @@ sampled_data_list <- lapply(sampled_files, read_csv, show_col_types = FALSE)
 # Extract batch info from filenames
 file_batches <- gsub("^sampled_|\\.csv$", "", sampled_files)
 
+aligned_batches <- unlist(lapply(seq_along(sampled_data_list), function(i) {
+    rep(i, nrow(new_matrices[[i]]$data))  # Use numeric batch labels
+}))
+
 # Step 2: Merge all sampled data
 all_pca_data <- NULL
 all_cell_labels <- NULL
@@ -183,8 +187,8 @@ for (i in seq_along(sampled_data_list)) {
     df <- sampled_data_list[[i]]
 
     # Extract PCA data
-    pca_matrix <- as.matrix(df[, -ncol(df)])
-    pca_matrix <- apply(pca_matrix, 2, scale)
+    pca_matrix <- as.matrix(df[, -ncol(df)]) / 100
+    # pca_matrix <- apply(pca_matrix, 2, scale)
     all_pca_data <- rbind(all_pca_data, pca_matrix)
 
     # Extract labels
@@ -197,7 +201,7 @@ cat("Total samples after merging all sampled data:", nrow(all_pca_data), "\n")
 # Step 3: Calculate Batch D-B Index
 n_clusters <- length(unique(all_tech_labels))
 batch_clustering <- pam(all_pca_data[, 1:5], k = n_clusters)
-db_index <- index.DB(all_pca_data[, 1:5], batch_clustering$clustering,
+db_index <- index.DB(all_pca_data[, 1:5], aligned_batches,
     d = NULL, centrotypes = "centroids"
 )$DB
 cat("Batch D-B Index: ", db_index, "\n")
@@ -299,6 +303,7 @@ generate_legend <- function(unique_values, color_mapping, output_file) {
         scale_color_manual(values = color_mapping) +
         theme_bw() +
         theme(
+            plot.margin = unit(c(-2, 2, 0, 1), "cm"),
             legend.position = "bottom",
             legend.title = element_blank(),
             legend.text = element_text(size = 9)
@@ -306,15 +311,15 @@ generate_legend <- function(unique_values, color_mapping, output_file) {
         guides(color = guide_legend(override.aes = list(alpha = 1, size = 3)))
 
     # Save legend as separate image
-    ggsave(output_file, dummy_plot, width = 3, height = 1, units = "in")
+    ggsave(output_file, dummy_plot, width = 5, height = 0.5, units = "in")
 }
 
 
 # Step 6: Generate standalone legends
 generate_legend(
-  unique_values = unique_celltypes,
-  color_mapping = celltype_colors,
-  output_file = "vis/Legend_CellType.png"
+  unique_values = unique_labels,
+  color_mapping = label_colors,
+  output_file = "Legend_CellType.png"
 )
 
 

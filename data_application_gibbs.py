@@ -14,6 +14,7 @@ from numpyro.infer import MCMC, NUTS
 
 import seaborn as sns
 from numpy.linalg import svd
+import umap
 
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
@@ -48,8 +49,8 @@ for file in adjusted_files:
     labels = df.iloc[:, -1].values  # Extract labels
 
     # Standardize rows
-    X_matrix = (X_matrix - X_matrix.mean(axis=0, keepdims=True)) / (X_matrix.std(axis=0, keepdims=True) + 1e-6)
-    # X_matrix = X_matrix / 100
+    # X_matrix = (X_matrix - X_matrix.mean(axis=0, keepdims=True)) / (X_matrix.std(axis=0, keepdims=True) + 1e-6)
+    X_matrix = X_matrix / 100
 
     X_data_list.append(X_matrix.T)
     labels_list.append(labels)
@@ -74,9 +75,9 @@ def batch_log_likelihood(R, X, s, u, sigma2, lambda_reg=100.0):
 
 def model(X_data, lambda_reg=100.0):
     sigma2 = numpyro.sample("sigma2", dist.InverseGamma(2.0, 10.0))
-    s = numpyro.sample("s", dist.HalfNormal(1.0), sample_shape=(B,))
-    u = numpyro.sample("u", dist.Normal(0., 1.), sample_shape=(d, n))
-    R = numpyro.sample("R", dist.Normal(0.0, 10.0), sample_shape=(B, d, d))
+    s = numpyro.sample("s", dist.HalfNormal(1.0), sample_shape=(B,)) # type: ignore[arg-type]
+    u = numpyro.sample("u", dist.Normal(0., 1.), sample_shape=(d, n)) # type: ignore[arg-type]
+    R = numpyro.sample("R", dist.Normal(0.0, 10.0), sample_shape=(B, d, d)) # type: ignore[arg-type]
 
     logL = batch_log_likelihood(R, X_data, s, u, sigma2, lambda_reg=lambda_reg)
     numpyro.factor("likelihood", logL)
@@ -102,27 +103,29 @@ R_samples = posterior_samples["R"]
 
 # %%
 
+# test if R is rotation matrix, i.e., orthogonal
 rtest = R_samples[0, 0, :, :]
-rtest.T @ rtest
+print(rtest.T @ rtest) # close to identity matrix
 
 # %%
 # Save s_samples, u_samples, and sigma2_samples
-np.savetxt("s_samples_gibbs.txt", np.array(s_samples), delimiter=",")
-np.savetxt("u_samples_gibbs.txt", np.array(u_samples).reshape(u_samples.shape[0], -1), delimiter=",")  # Flatten last two dims
-np.savetxt("sigma2_samples_gibbs.txt", np.array(sigma2_samples), delimiter=",")
+np.savetxt("res_data_application/s_samples_gibbs.txt", np.array(s_samples), delimiter=",")
+np.savetxt("res_data_application/u_samples_gibbs.txt", np.array(u_samples).reshape(u_samples.shape[0], -1), delimiter=",")  # Flatten last two dims
+np.savetxt("res_data_application/sigma2_samples_gibbs.txt", np.array(sigma2_samples), delimiter=",")
 
 R_samples_reshaped = R_samples.reshape(num_samples * B, d * d)
-np.savetxt("R_samples_gibbs.txt", R_samples_reshaped, delimiter=",")
+np.savetxt("res_data_application/R_samples_gibbs.txt", R_samples_reshaped, delimiter=",")
 
 # %%
 # Load s_samples, u_samples, and sigma2_samples
-# s_samples = np.loadtxt("res_data_application/s_samples.txt", delimiter=",")
-# sigma2_samples = np.loadtxt("res_data_application/sigma2_samples.txt", delimiter=",")
+s_samples = np.loadtxt("res_data_application/s_samples_gibbs.txt", delimiter=",")
+sigma2_samples = np.loadtxt("res_data_application/sigma2_samples_gibbs.txt", delimiter=",")
 
-# # Reshape u_samples back to its original form (num_samples, d, n)
-# num_samples = s_samples.shape[0]  # Assuming s_samples has shape (num_samples,)
-# u_samples = np.loadtxt("res_data_application/u_samples.txt", delimiter=",").reshape(num_samples, d, n)
+# Reshape u_samples back to its original form (num_samples, d, n)
+num_samples = s_samples.shape[0]  # Assuming s_samples has shape (num_samples,)
+u_samples = np.loadtxt("res_data_application/u_samples_gibbs.txt", delimiter=",").reshape(num_samples, d, n)
 
+R_samples = np.loadtxt("res_data_application/R_samples_gibbs.txt", delimiter=",").reshape(num_samples, B, d, d)
 
 # %%
 # Extract W_1_11 (first entry of first batch's W matrix)
@@ -165,7 +168,7 @@ plt.show()
 
 # %%
 
-thin_interval = 10  # Keep every 20th sample
+thin_interval = 10  # Keep every number of sample
 num_thinned_samples = num_samples // thin_interval
 
 # Indices of samples after burn-in and thinning
@@ -213,7 +216,7 @@ for j in trange(num_thinned_samples):
     ari_values[j] = ARI(cell_labels, cluster_labels)
     
     # Compute Batch Davies-Bouldin Index
-    db_indices[j] = DBI(all_data, cluster_labels)
+    db_indices[j] = DBI(all_data, batch_labels)
 
 # %%
 
@@ -221,17 +224,18 @@ for j in trange(num_thinned_samples):
 mean_nmi, mean_ari, mean_db_index = np.nanmean(nmi_values), np.nanmean(ari_values), np.nanmean(db_indices)
 max_nmi, max_nmi_index = np.nanmax(nmi_values), np.nanargmax(nmi_values)
 max_ari, max_ari_index = np.nanmax(ari_values), np.nanargmax(ari_values)
-min_db_index, min_db_index_index = np.nanmin(db_indices), np.nanargmin(db_indices)
+max_db_index, max_db_index_index = np.nanmax(db_indices), np.nanargmax(db_indices)
 
 print(f"Posterior Mean NMI: {mean_nmi}")
 print(f"Posterior Mean ARI: {mean_ari}")
 print(f"Posterior Mean DB Index: {mean_db_index}")
 print(f"Maximum NMI: {max_nmi} at index: {max_nmi_index}")
 print(f"Maximum ARI: {max_ari} at index: {max_ari_index}")
-print(f"Minimum DB Index: {min_db_index} at index: {min_db_index_index}")
+print(f"DBI: {db_indices[max_ari_index]} at index: {max_nmi_index}")
+print(f"Maximum DB Index: {max_db_index} at index: {max_db_index_index}")
 
 # %%
-j = max_nmi_index
+j = max_nmi_index # 260 RRMEMBER to change
 corrected_data = []
 
 for b in range(B):
@@ -246,11 +250,11 @@ for b in range(B):
 
 all_data = np.vstack(corrected_data)
 
-pca = PCA(n_components=2)
-all_data_pca = pca.fit_transform(all_data)
+all_data_pca = PCA(n_components=2).fit_transform(all_data)
+np.savetxt("res_data_application/pca_gibbs.txt", all_data_pca)
 
-np.savetxt("pca_gibbs.txt", all_data_pca)
-
+all_data_umap = umap.UMAP().fit_transform(all_data)
+np.savetxt("res_data_application/umap_gibbs.txt", all_data_umap) # type: ignore[arg-type]
 
 
 # %%
@@ -267,7 +271,7 @@ plt.grid(True, linestyle="--", alpha=0.6)
 # Save or show plot
 plt.show()
 
-np.savetxt("db_indices_gibbs.txt", db_indices_np)
+np.savetxt("res_data_application/db_indices_gibbs.txt", db_indices_np)
 
 # %%
 angles_R = []
@@ -303,9 +307,5 @@ plt.tight_layout()
 # plt.savefig("density_angle_lambda_100.png", dpi=300)
 plt.show()
 
-np.savetxt("angles_gibbs.txt", np.concatenate(angles_R))
-
-# %%
-
-
+np.savetxt("res_data_application/angles_gibbs.txt", np.concatenate(angles_R))
 # %%

@@ -6,6 +6,9 @@ import pandas as pd
 import glob
 import os
 
+import umap
+
+from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
 from sklearn.metrics import normalized_mutual_info_score as NMI
 from sklearn.metrics import adjusted_rand_score as ARI
@@ -34,8 +37,8 @@ for file in adjusted_files:
     labels = df.iloc[:, -1].values  # Extract labels
 
     # Standardize rows
-    X_matrix = (X_matrix - X_matrix.mean(axis=0, keepdims=True)) / (X_matrix.std(axis=0, keepdims=True) + 1e-6)
-    # X_matrix = X_matrix / 100
+    # X_matrix = (X_matrix - X_matrix.mean(axis=0, keepdims=True)) / (X_matrix.std(axis=0, keepdims=True) + 1e-6)
+    X_matrix = X_matrix / 100
 
     X_data_list.append(X_matrix.T)
     labels_list.append(labels)
@@ -44,21 +47,24 @@ X_data = jnp.stack(X_data_list, axis=0)  # Shape: (B, d, n)
 B, d, n = X_data.shape
 print(f"Data Loaded: B={B}, n={n}, d={d}")
 
-
 # %%
-
-gpa_res = np.loadtxt("gpa_aligned_data_2d.txt")
-
 # Compute corrections and clustering analysis
-corrected_data = gpa_res
+corrected_data = []
 batch_labels, cell_labels = [], []
 
 for b in range(B):
+    Xb = X_data[b, :, :]  # Current batch data
+    corrected_data.append(Xb.T)
+    
+    # Store labels
     batch_labels.extend([b] * n)
     cell_labels.extend(labels_list[b])
 
+all_data = np.vstack(corrected_data)
+# print(f"all_data shape: {all_data.shape}")
+
 # Clustering analysis
-kmeans = KMeans(n_clusters=B, n_init=10).fit(corrected_data)
+kmeans = KMeans(n_clusters=B, n_init=10).fit(all_data)
 cluster_labels = kmeans.labels_
 
 # Compute NMI and ARI
@@ -66,12 +72,50 @@ print(f"NMI: {NMI(cell_labels, cluster_labels)}")
 print(f"ARI: {ARI(cell_labels, cluster_labels)}")
 
 # Compute Batch Davies-Bouldin Index
-print(f"DBI: {DBI(corrected_data, cluster_labels)}")
+print(f"DBI: {DBI(all_data, batch_labels)}")
 
+# %%
+
+all_data_umap = umap.UMAP().fit_transform(all_data)
+np.savetxt("res_data_application/umap_raw.txt", all_data_umap) # type: ignore[arg-type]
+
+all_data_pca = PCA(n_components=2).fit_transform(all_data)
+np.savetxt("res_data_application/pca_raw.txt", all_data_pca) # type: ignore[arg-type]
+
+# %%
+
+gpa_res = np.loadtxt("res_data_application/gpa_aligned_data_2d.txt")
+
+# Compute corrections and clustering analysis
+batch_labels, cell_labels = [], []
+
+for b in range(B):
+    batch_labels.extend([b] * n)
+    cell_labels.extend(labels_list[b])
+
+# Clustering analysis
+kmeans = KMeans(n_clusters=B, n_init=10).fit(gpa_res)
+cluster_labels = kmeans.labels_
+
+# Compute NMI and ARI
+print(f"NMI: {NMI(cell_labels, cluster_labels)}")
+print(f"ARI: {ARI(cell_labels, cluster_labels)}")
+
+# Compute Batch Davies-Bouldin Index
+print(f"DBI: {DBI(gpa_res, batch_labels)}")
+
+# %%
+
+gpa_umap = umap.UMAP().fit_transform(gpa_res)
+np.savetxt("res_data_application/umap_gpa.txt", gpa_umap) # type: ignore[arg-type]
+
+all_data_pca = PCA(n_components=2).fit_transform(gpa_res)
+np.savetxt("res_data_application/pca_gpa.txt", all_data_pca) # type: ignore[arg-type]
 
 
 
 # %%
+# processing the results from R for Gibbs posterior
 
 # Load s_samples, u_samples, and sigma2_samples
 s_samples = np.loadtxt("S_samples_lambda_0_new.txt")
