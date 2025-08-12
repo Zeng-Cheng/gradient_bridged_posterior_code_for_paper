@@ -17,6 +17,11 @@ Many statistical problems include model parameters that are defined as the solut
 - Results in Section 5.
     - First, in `flow_net.py`, we sample some simulated data, run MCMC to produce the posterior samples, and save the samples in `res/`.
     - Figure 3 and 4 are plotted by `plot-flow-net.R`.
+    - Figure 2, 9 and 10 are plotted by `plot-flow-net-mcmc-mixing.R`.
 - Results in Section 6.
-    - `data_preprocessing.R`
-    - `data_application.py`
+    - Use `data_preprocessing.R` to produce the preprocessed data.
+    - Use `data_application.py` to produce the results of gradient-bridged posterior.
+    - Use `data_application_gibbs.py` to produce the results of Gibbs posterior.
+    - Figure 5--8 are plotted by `plot-data-application.R`.
+- Results in Appendix B.
+    - Figure 11--13 are plotted by `latent_gau_*.py` separately for each model. 
