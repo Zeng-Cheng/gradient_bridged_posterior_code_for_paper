@@ -3,7 +3,6 @@ from tqdm.notebook import trange
 import torch
 from torch.distributions.multivariate_normal import MultivariateNormal as MVN
 import numpy as np
-import scipy
 from polyagamma import random_polyagamma
 import pickle
 import matplotlib.pyplot as plt
@@ -42,7 +41,7 @@ def acc_rate(accept, i, lags = 200):
         return np.sum(accept[(i - lags):i]) / lags
     
 # %% 
-file_path = "generated_data.pkl"
+file_path = "data/generated_data.pkl"
 with open(file_path, "rb") as f:
     data = pickle.load(f)
 

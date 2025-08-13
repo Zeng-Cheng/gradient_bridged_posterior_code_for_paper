@@ -6,7 +6,6 @@ import scipy
 import pickle
 import matplotlib.pyplot as plt
 from tqdm.notebook import trange
-from polyagamma import random_polyagamma
 
 def latent_gau_optim_step(dist_x, y, tau, b):
     q_matrix = tau * (jnp.exp(-dist_x / 2 / b) + 0.01 * jnp.eye(n))
@@ -43,7 +42,7 @@ def acc_rate(accept, i, lags = 200):
         return np.sum(accept[(i - lags):i]) / lags
 
 # %%
-file_path = "generated_data.pkl"
+file_path = "data/generated_data.pkl"
 with open(file_path, "rb") as f:
     data = pickle.load(f)
 
@@ -58,8 +57,8 @@ n = X.shape[0]
 alpha_prior = 2
 beta = 5
 # sampling parameters
-num_samples = 6000
-burn_in = 3000
+num_samples = 10000
+burn_in = 2000
 
 lam_tau = 1
 lam_b = 0.5

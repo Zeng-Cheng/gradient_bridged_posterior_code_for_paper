@@ -9,22 +9,19 @@ from numpyro.infer import MCMC, HMC, NUTS
 from numpyro.infer.initialization import init_to_value
 import matplotlib.pyplot as plt
 from statsmodels.graphics.tsaplots import plot_acf
-import pickle
 from tqdm.notebook import trange
 
 # %%
 # --------------------------------------------------
 # Data loading
 # --------------------------------------------------
-file_path = "generated_data.pkl"
-with open(file_path, "rb") as f:
-    data = pickle.load(f)
+x_np = np.loadtxt('data/latent_gau_x.txt')
+y = np.loadtxt('data/latent_gau_y.txt')
+z_truth = np.loadtxt('data/latent_gau_z.txt')
 
-x = jnp.array(data['x']).T[0]
-# Convert to NumPy for plotting if needed
-x_np = np.array(data['x'].squeeze())
-z_truth = jnp.array(data['z'])
-y = jnp.array(data['y'])
+x = jnp.array(x_np)
+z_truth = jnp.array(z_truth)
+y = jnp.array(y)
 p = x.shape[0]
 
 # %%
@@ -176,12 +173,12 @@ def model(x, y, lambda_reg):
 # --------------------------------------------------
 # Use current estimates as initial values
 initial_params = {'w': w_map, 'tau': tau_map, 'b': b_map}
-nuts_kernel = HMC(
+nuts_kernel = NUTS(
     model, init_strategy=init_to_value(values=initial_params),
     dense_mass=[("w", "tau", "b")], # type: ignore
     inverse_mass_matrix={("w", "tau", "b"): inverse_mass})
 # nuts_kernel = NUTS(model, init_strategy=init_to_value(values=initial_params))
-mcmc = MCMC(nuts_kernel, num_samples=12000, num_warmup=2000)
+mcmc = MCMC(nuts_kernel, num_samples=10000, num_warmup=2000)
 rng_key = jax.random.PRNGKey(70)
 mcmc.run(rng_key, x, y, lambda_reg)
 samples = mcmc.get_samples()
@@ -192,7 +189,6 @@ samples = mcmc.get_samples()
 w_samples = samples['w']
 tau_samples = samples['tau']
 b_samples = samples['b']
-
 
 
 # %%
